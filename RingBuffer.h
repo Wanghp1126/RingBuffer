@@ -1,52 +1,69 @@
 /*******************************************************************************
 * @FileName: RingBuffer.h
 * @Author: Michael
-* @Version: V1.0
-* @Date: 2020/03/23
-* @Brief: »·ĞÎ¶ÓÁĞ
+* @Version: V1.1
+* @Date: 2021/02/16
+* @Brief: ç¯å½¢é˜Ÿåˆ—
 * @Others:
 ********************************************************************************
 * @Function List:
-*  1. uint16_t RingBuffer_FreeSpace(struct RingBuffer_t* buf)
-*  2. int8_t RingBuffer_Push(struct RingBuffer_t* buf, void* element)
-*  3. int8_t RingBuffer_Pop(struct RingBuffer_t* buf, void* element, int8_t readOnly)
-*  4. void RingBuffer_Flush(struct RingBuffer_t* buf)
+*  1. uint16_t RingBuffer_FreeSpace(struct RingBuffer_t* ringBuffer)
+*  2. int8_t RingBuffer_Push(struct RingBuffer_t* ringBuffer, void* element, bool checkFull)
+*  3. int8_t int8_t RingBuffer_Pop(struct RingBuffer_t* ringBuffer, void* element, bool readOnly)
+*  4. void* RingBuffer_Reset(struct RingBuffer_t* ringBuffer)
+*  5. void* RingBuffer_ClearUp(struct RingBuffer_t* ringBuffer)
 *
 ********************************************************************************
 * @History:
-*  1. Date:  
-*  Author:
+*  1. V1.0
+*  Date: 2020/03/23
+*  Author: Michael
+*  1. uint16_t RingBuffer_FreeSpace(struct RingBuffer_t* ringBuffer)
+*  2. int8_t RingBuffer_Push(struct RingBuffer_t* ringBuffer, void* element)
+*  3. int8_t RingBuffer_Pop(struct RingBuffer_t* ringBuffer, void* element, int8_t readOnly)
+*  4. void RingBuffer_Flush(struct RingBuffer_t* ringBuffer)
+
+*  2. V1.1
+*  Date: 2021/02/16
+*  Author: Michael
 *  Modification:
-*  
-*  2. ...
+*  å¢åŠ  void* RingBuffer_ClearUp(struct RingBuffer_t* ringBuffer)
+*  ä¿®æ”¹ int8_t RingBuffer_Push(struct RingBuffer_t* ringBuffer, void* element, bool checkFull)
+*  ä¿®æ”¹ int8_t RingBuffer_Pop(struct RingBuffer_t* ringBuffer, void* element, bool readOnly)
+*  ä¿®æ”¹ void* RingBuffer_Reset(struct RingBuffer_t* ringBuffer)
+*
+*  3. ...
 *
 *******************************************************************************/
 
 #ifndef __RINGBUFFER_H__
 #define __RINGBUFFER_H__
 
+// ç¡¬ä»¶æ”¯æŒ
 #include "stm32f10x.h"
+
+#include <stdbool.h>
 
 #ifdef __cplusplus
 extern "C" {
 #endif // __cplusplus
 
 	/**
-	»·ĞÎ¶ÓÁĞ½á¹¹Ìå£¬²»ÍÆ¼öÖ±½ÓÊ¹ÓÃ£¬ÍÆ¼öÊ¹ÓÃÏÂÃæµÄºê¶¨Òå RingBuffer_Def
+	ç¯å½¢é˜Ÿåˆ—ç»“æ„ä½“ï¼Œä¸æ¨èç›´æ¥ä½¿ç”¨ï¼Œæ¨èä½¿ç”¨ä¸‹é¢çš„å®å®šä¹‰ RingBuffer_Def
 	*/
 	struct RingBuffer_t {
-		void* const buffer; // ´æ´¢¿Õ¼äµÄÊ×Ö¸Õë
-		uint16_t tail;      // Î²²¿
-		uint16_t head;      // Ê×²¿
-		uint16_t const elements;    // ÔªËØµÄÊıÁ¿
-		uint16_t const elementSize; // ÔªËØµÄ×Ö½Ú³¤¶È
+		void* const buffer; // å­˜å‚¨ç©ºé—´çš„é¦–æŒ‡é’ˆ
+		uint16_t tail;      // å°¾éƒ¨
+		uint16_t head;      // é¦–éƒ¨
+		uint16_t const element_count;  // å…ƒç´ çš„æ•°é‡
+		uint16_t const element_size;   // å…ƒç´ çš„å­—èŠ‚é•¿åº¦
 	};
 
 	/**
-	Í¨¹ıºê¶¨Òå»·ĞÎ¶ÓÁĞ£¨Í¬Ê±¶¨ÒåÁË´æ´¢¿Õ¼äºÍ»·ĞÎ¶ÓÁĞ½á¹¹Ìå£©
-	type - ÔªËØÀàĞÍ£¬Èç£ºuint8_t¡¢int32_t¡¢struct myStruct
-	bufName - Òª¶¨Òå»·ĞÎ¶ÓÁĞµÄÃû³Æ
-	size - ĞèÒª´æ´¢µÄÔªËØÊıÁ¿
+	é€šè¿‡å®å®šä¹‰ç¯å½¢é˜Ÿåˆ—ï¼ˆåŒæ—¶å®šä¹‰äº†å­˜å‚¨ç©ºé—´å’Œç¯å½¢é˜Ÿåˆ—ç»“æ„ä½“ï¼‰
+	type - å…ƒç´ ç±»å‹ï¼Œå¦‚ï¼šuint8_tã€int32_tã€struct myStruct
+	bufName - è¦å®šä¹‰ç¯å½¢é˜Ÿåˆ—çš„åç§°
+	size - éœ€è¦å­˜å‚¨çš„å…ƒç´ æ•°é‡
 	*/
 #define RingBuffer_Def(type, bufName, size)     \
     type bufName##_data[size];                  \
@@ -54,77 +71,92 @@ extern "C" {
                  .buffer = bufName##_data,      \
                  .tail = 0,                     \
                  .head = 0,                     \
-                 .elements = size,              \
-                 .elementSize = sizeof(type)    \
-    };
+                 .element_count = size,         \
+                 .element_size = sizeof(type)   \
+    }
 
 
 	/**
 	* @Function:
-			  »ñµÃ¶ÓÁĞÖĞµÄ¿ÕÏĞ¿Õ¼ä
+			  è·å¾—é˜Ÿåˆ—ä¸­çš„ç©ºé—²ç©ºé—´
 	* @Brief:
 	* @Calls: None
 	* @Called By: None
 	* @Input:
-			  buf - »·ĞÎ¶ÓÁĞ½á¹¹ÌåÖ¸Õë
+			  ringBuffer - ç¯å½¢é˜Ÿåˆ—ç»“æ„ä½“æŒ‡é’ˆ
 	* @Output: None
 	* @Return:
-			  ´æ´¢ÔªËØÀàĞÍµÄ¿ÕÏĞ¿Õ¼äµÄÊıÁ¿
+			  å­˜å‚¨å…ƒç´ ç±»å‹çš„ç©ºé—²ç©ºé—´çš„æ•°é‡
 	* @Others: None
 	**/
-	uint16_t RingBuffer_FreeSpace(struct RingBuffer_t* buf);
+	uint16_t RingBuffer_FreeSpace(struct RingBuffer_t* ringBuffer);
 
 	/**
-	* @Function:
-			  °ÑÊı¾İÌí¼Óµ½»·ĞÎ¶ÓÁĞÖĞ
-	* @Brief:
-	* @Calls:
-			  RingBuffer_FreeSpace()¡¢memcpy()
+	* @Function:  
+			  æŠŠæ•°æ®æ·»åŠ åˆ°ç¯å½¢é˜Ÿåˆ—ä¸­
+	* @Brief: 
+	* @Calls:  
+			  RingBuffer_FreeSpace()ã€memcpy()
 	* @Called By: None
-	* @Input:
-			  buf - »·ĞÎ¶ÓÁĞ½á¹¹ÌåÖ¸Õë
-			  element - ´æ´¢µÄÔªËØ£¨¿ÉÒÔÊÇuint8_t¡¢int16_t»òÕßstructµÈ£©Ö¸Õë
-			  checkFull - ·Ç0¼ì²é¶ÓÁĞÒÑÂú£»0²»¼ì²é¶ÓÁĞ£¬Ö±½Ó¸²¸Ç
+	* @Input:  
+			  ringBuffer - ç¯å½¢é˜Ÿåˆ—ç»“æ„ä½“æŒ‡é’ˆ
+			  element - å­˜å‚¨çš„å…ƒç´ ï¼ˆå¯ä»¥æ˜¯uint8_tã€int16_tæˆ–è€…structç­‰ï¼‰æŒ‡é’ˆ
+			  checkFull - true æ£€æŸ¥é˜Ÿåˆ—æ˜¯å¦å·²æ»¡ï¼›
+						  fasleä¸æ£€æŸ¥é˜Ÿåˆ—æ˜¯å¦å·²æ»¡ï¼Œé˜Ÿåˆ—å·²æ»¡æ—¶ç›´æ¥è¦†ç›–åŸæ•°æ®
 	* @Output: None
-	* @Return:
-			  0 - ³É¹¦
-			  -1 - ¶ÓÁĞÒÑÂú
+	* @Return:  
+			  0 - æˆåŠŸ
+			  -1 - é˜Ÿåˆ—å·²æ»¡
 	* @Others: None
 	**/
-	int8_t RingBuffer_Push(struct RingBuffer_t* buf, void* element, uint8_t checkFull);
+	int8_t RingBuffer_Push(struct RingBuffer_t* ringBuffer, void* element, bool checkFull);
 
 	/**
-	* @Function:
-			  »ñÈ¡»·ĞÎ¶ÓÁĞÖĞµÄÊı¾İ
-	* @Brief:
-	* @Calls:
-			  RingBuffer_FreeSpace()¡¢memcpy()
+	* @Function:  
+			  è·å–ç¯å½¢é˜Ÿåˆ—ä¸­çš„æ•°æ®
+	* @Brief: 
+	* @Calls:  
+			  RingBuffer_FreeSpace()ã€memcpy()
 	* @Called By: None
-	* @Input:
-			  buf - »·ĞÎ¶ÓÁĞ½á¹¹ÌåÖ¸Õë
-			  element - ´æ´¢µÄÔªËØ£¨¿ÉÒÔÊÇuint8_t¡¢int16_t»òÕßstructµÈ£©Ö¸Õë
-			  readOnly - 0Îª·ÇÖ»¶Á£¬´ËÊ±»áµ÷Õû¶ÓÁĞÖĞµÄÖ¸Õë£»·Ç0ÎªÖ»¶Á£¬Ö»¶ÁÊ±²»µ÷Õû¶ÓÁĞÖĞµÄÖ¸Õë
+	* @Input:  
+			  ringBuffer - ç¯å½¢é˜Ÿåˆ—ç»“æ„ä½“æŒ‡é’ˆ
+			  element - å­˜å‚¨çš„å…ƒç´ ï¼ˆå¯ä»¥æ˜¯uint8_tã€int16_tæˆ–è€…structç­‰ï¼‰æŒ‡é’ˆ
+			  readOnly - true åªè¯»ä½†ä¸è°ƒæ•´é˜Ÿåˆ—ä¸­çš„æŒ‡é’ˆ; falseè¯»å–æ•°æ®å¹¶è°ƒæ•´é˜Ÿåˆ—ä¸­çš„æŒ‡é’ˆï¼›
 	* @Output: None
-	* @Return:
-			  0 - ³É¹¦
-			  -1 - ¶ÓÁĞÎª¿Õ
+	* @Return:  
+			  0 - æˆåŠŸ
+			  -1 - é˜Ÿåˆ—ä¸ºç©º
 	* @Others: None
 	**/
-	int8_t RingBuffer_Pop(struct RingBuffer_t* buf, void* element, uint8_t readOnly);
+	int8_t RingBuffer_Pop(struct RingBuffer_t* ringBuffer, void* element, bool readOnly);
 
 	/**
 	* @Function:
-			  ÖØÖÃ¶ÓÁĞµÄÍ·Ö¸ÕëºÍÎ²²¿Ö¸ÕëÎª0£¬²»Çå³ıÆäËûÄÚÈİ
+			  é‡ç½®é˜Ÿåˆ—çš„å¤´æŒ‡é’ˆå’Œå°¾éƒ¨æŒ‡é’ˆä¸º0ï¼Œä¸æ¸…é™¤å…¶ä»–å†…å®¹
 	* @Brief: None
 	* @Calls: None
 	* @Called By: None
 	* @Input:
-			  buf - »·ĞÎ¶ÓÁĞ½á¹¹ÌåÖ¸Õë
+			  ringBuffer - ç¯å½¢é˜Ÿåˆ—ç»“æ„ä½“æŒ‡é’ˆ
 	* @Output: None
-	* @Return: None
+	* @Return: ç¯å½¢é˜Ÿåˆ—ç»“æ„ä½“æŒ‡é’ˆ
 	* @Others: None
 	**/
-	void RingBuffer_Flush(struct RingBuffer_t* buf);
+	void* RingBuffer_Reset(struct RingBuffer_t* ringBuffer);
+	
+	/**
+	* @Function:  
+			  æ¸…ç©ºé˜Ÿåˆ—
+	* @Brief: None
+	* @Calls: RingBuffer_Reset()ã€memset()
+	* @Called By: None
+	* @Input:  
+			  ringBuffer - ç¯å½¢é˜Ÿåˆ—ç»“æ„ä½“æŒ‡é’ˆ
+	* @Output: None
+	* @Return: ç¯å½¢é˜Ÿåˆ—ç»“æ„ä½“æŒ‡é’ˆ
+	* @Others: None
+	**/
+	void* RingBuffer_ClearUp(struct RingBuffer_t* ringBuffer);
 
 #ifdef __cplusplus
 }
