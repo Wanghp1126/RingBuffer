@@ -1,24 +1,38 @@
 /*******************************************************************************
 * @FileName: RingBuffer.h
 * @Author: Michael
-* @Version: V1.0
-* @Date: 2020/03/23
-* @Brief: »·ÐÎ¶ÓÁÐ
+* @Version: V1.1
+* @Date: 2021/02/16
+* @Brief: çŽ¯å½¢é˜Ÿåˆ—
 * @Others:
 ********************************************************************************
 * @Function List:
-*  1. uint16_t RingBuffer_FreeSpace(struct RingBuffer_t* buf)
-*  2. int8_t RingBuffer_Push(struct RingBuffer_t* buf, void* element)
-*  3. int8_t RingBuffer_Pop(struct RingBuffer_t* buf, void* element, int8_t readOnly)
-*  4. void RingBuffer_Flush(struct RingBuffer_t* buf)
+*  1. uint16_t RingBuffer_FreeSpace(struct RingBuffer_t* ringBuffer)
+*  2. int8_t RingBuffer_Push(struct RingBuffer_t* ringBuffer, void* element, bool checkFull)
+*  3. int8_t int8_t RingBuffer_Pop(struct RingBuffer_t* ringBuffer, void* element, bool readOnly)
+*  4. void* RingBuffer_Reset(struct RingBuffer_t* ringBuffer)
+*  5. void* RingBuffer_ClearUp(struct RingBuffer_t* ringBuffer)
 *
 ********************************************************************************
 * @History:
-*  1. Date:  
-*  Author:
+*  1. V1.0
+*  Date: 2020/03/23
+*  Author: Michael
+*  1. uint16_t RingBuffer_FreeSpace(struct RingBuffer_t* ringBuffer)
+*  2. int8_t RingBuffer_Push(struct RingBuffer_t* ringBuffer, void* element)
+*  3. int8_t RingBuffer_Pop(struct RingBuffer_t* ringBuffer, void* element, int8_t readOnly)
+*  4. void RingBuffer_Flush(struct RingBuffer_t* ringBuffer)
+
+*  2. V1.1
+*  Date: 2021/02/16
+*  Author: Michael
 *  Modification:
-*  
-*  2. ...
+*  å¢žåŠ  void* RingBuffer_ClearUp(struct RingBuffer_t* ringBuffer)
+*  ä¿®æ”¹ int8_t RingBuffer_Push(struct RingBuffer_t* ringBuffer, void* element, bool checkFull)
+*  ä¿®æ”¹ int8_t RingBuffer_Pop(struct RingBuffer_t* ringBuffer, void* element, bool readOnly)
+*  ä¿®æ”¹ void* RingBuffer_Reset(struct RingBuffer_t* ringBuffer)
+*
+*  3. ...
 *
 *******************************************************************************/
 
@@ -27,71 +41,72 @@
 
 /**
 * @Function: 
-          »ñµÃ¶ÓÁÐÖÐµÄ¿ÕÏÐ¿Õ¼ä
+          èŽ·å¾—é˜Ÿåˆ—ä¸­çš„ç©ºé—²ç©ºé—´
 * @Brief: 
 * @Calls: None
 * @Called By: None
 * @Input: 
-          buf - »·ÐÎ¶ÓÁÐ½á¹¹ÌåÖ¸Õë
+          ringBuffer - çŽ¯å½¢é˜Ÿåˆ—ç»“æž„ä½“æŒ‡é’ˆ
 * @Output: None
 * @Return: 
-          ´æ´¢ÔªËØÀàÐÍµÄ¿ÕÏÐ¿Õ¼äµÄÊýÁ¿
+          èƒ½å¤Ÿå­˜å‚¨å…ƒç´ ç±»åž‹çš„ç©ºé—²ç©ºé—´çš„æ•°é‡
 * @Others: None
 **/
-uint16_t RingBuffer_FreeSpace(struct RingBuffer_t* buf)
+uint16_t RingBuffer_FreeSpace(struct RingBuffer_t* ringBuffer)
 {
 	int32_t total;
 
-	total = buf->head - buf->tail;
+	total = ringBuffer->head - ringBuffer->tail;
 	if (total < 0)
 	{
-		total += (2 * buf->elements);
+		total += (2 * ringBuffer->element_count);
 	}
 
-	total = buf->elements - total;
+	total = ringBuffer->element_count - total;
 
 	return (uint16_t)total;
 }
 
 /**
 * @Function:  
-          °ÑÊý¾ÝÌí¼Óµ½»·ÐÎ¶ÓÁÐÖÐ
+          æŠŠæ•°æ®æ·»åŠ åˆ°çŽ¯å½¢é˜Ÿåˆ—ä¸­
 * @Brief: 
 * @Calls:  
-          RingBuffer_FreeSpace()¡¢memcpy()
+          RingBuffer_FreeSpace()ã€memcpy()
 * @Called By: None
 * @Input:  
-          buf - »·ÐÎ¶ÓÁÐ½á¹¹ÌåÖ¸Õë
-          element - ´æ´¢µÄÔªËØ£¨¿ÉÒÔÊÇuint8_t¡¢int16_t»òÕßstructµÈ£©Ö¸Õë
-          checkFull - ·Ç0¼ì²é¶ÓÁÐÒÑÂú£»0²»¼ì²é¶ÓÁÐ£¬Ö±½Ó¸²¸Ç
+          ringBuffer - çŽ¯å½¢é˜Ÿåˆ—ç»“æž„ä½“æŒ‡é’ˆ
+          element - å­˜å‚¨çš„å…ƒç´ ï¼ˆå¯ä»¥æ˜¯uint8_tã€int16_tæˆ–è€…structç­‰ï¼‰æŒ‡é’ˆ
+          checkFull - true æ£€æŸ¥é˜Ÿåˆ—æ˜¯å¦å·²æ»¡ï¼›
+                      fasleä¸æ£€æŸ¥é˜Ÿåˆ—æ˜¯å¦å·²æ»¡ï¼Œé˜Ÿåˆ—å·²æ»¡æ—¶ç›´æŽ¥è¦†ç›–åŽŸæ•°æ®
 * @Output: None
 * @Return:  
-          0 - ³É¹¦
-          -1 - ¶ÓÁÐÒÑÂú
+          0 - æˆåŠŸ
+          -1 - é˜Ÿåˆ—å·²æ»¡
 * @Others: None
 **/
-int8_t RingBuffer_Push(struct RingBuffer_t* buf, void* element, uint8_t checkFull)
+int8_t RingBuffer_Push(struct RingBuffer_t* ringBuffer, void* element, bool checkFull)
 {
 	uint8_t* head;
 
-	if (checkFull)
+	if (checkFull == true)
 	{
-		if (RingBuffer_FreeSpace(buf) == 0)
+		if (RingBuffer_FreeSpace(ringBuffer) == 0)
 		{
-			return -1; // ¶ÓÁÐÒÑÂú
+			return -1; // é˜Ÿåˆ—å·²æ»¡
 		}
 	}
 
-	head = (uint8_t*)buf->buffer
-		+ ((buf->head % buf->elements) * buf->elementSize);
+	head = (uint8_t*)ringBuffer->buffer
+		+ ((ringBuffer->head % ringBuffer->element_count) * ringBuffer->element_size);
 
-	memcpy(head, element, buf->elementSize);
+	memcpy(head, element, ringBuffer->element_size);
 
-	buf->head++;
+	ringBuffer->head++;
 
-	if (buf->head >= (2 * buf->elements)) // 2* ÊÇÎªÁË·½±ã¿ÕÏÐ¿Õ¼ä¼ÆËã
+	if (ringBuffer->head >= (2 * ringBuffer->element_count)) // 2* æ˜¯ä¸ºäº†æ–¹ä¾¿ç©ºé—²ç©ºé—´è®¡ç®—
 	{
-		buf->head = 0;
+		ringBuffer->head = 0;
 	}
 
 	return 0;
@@ -99,46 +114,46 @@ int8_t RingBuffer_Push(struct RingBuffer_t* buf, void* element, uint8_t checkFul
 
 /**
 * @Function:  
-          »ñÈ¡»·ÐÎ¶ÓÁÐÖÐµÄÊý¾Ý
+          èŽ·å–çŽ¯å½¢é˜Ÿåˆ—ä¸­çš„æ•°æ®
 * @Brief: 
 * @Calls:  
-          RingBuffer_FreeSpace()¡¢memcpy()
+          RingBuffer_FreeSpace()ã€memcpy()
 * @Called By: None
 * @Input:  
-          buf - »·ÐÎ¶ÓÁÐ½á¹¹ÌåÖ¸Õë
-          element - ´æ´¢µÄÔªËØ£¨¿ÉÒÔÊÇuint8_t¡¢int16_t»òÕßstructµÈ£©Ö¸Õë
-          readOnly - 0Îª·ÇÖ»¶Á£¬´ËÊ±»áµ÷Õû¶ÓÁÐÖÐµÄÖ¸Õë£»·Ç0ÎªÖ»¶Á£¬Ö»¶ÁÊ±²»µ÷Õû¶ÓÁÐÖÐµÄÖ¸Õë
+          ringBuffer - çŽ¯å½¢é˜Ÿåˆ—ç»“æž„ä½“æŒ‡é’ˆ
+          element - å­˜å‚¨çš„å…ƒç´ ï¼ˆå¯ä»¥æ˜¯uint8_tã€int16_tæˆ–è€…structç­‰ï¼‰æŒ‡é’ˆ
+          readOnly - true åªè¯»ä½†ä¸è°ƒæ•´é˜Ÿåˆ—ä¸­çš„æŒ‡é’ˆ; falseè¯»å–æ•°æ®å¹¶è°ƒæ•´é˜Ÿåˆ—ä¸­çš„æŒ‡é’ˆï¼›
 * @Output: None
 * @Return:  
-          0 - ³É¹¦
-          -1 - ¶ÓÁÐÎª¿Õ
+          0 - æˆåŠŸ
+          -1 - é˜Ÿåˆ—ä¸ºç©º
 * @Others: None
 **/
-int8_t RingBuffer_Pop(struct RingBuffer_t* buf, void* element, uint8_t readOnly)
+int8_t RingBuffer_Pop(struct RingBuffer_t* ringBuffer, void* element, bool readOnly)
 {
 	uint8_t* tail;
 
-	if (RingBuffer_FreeSpace(buf) == buf->elements)
+	if (RingBuffer_FreeSpace(ringBuffer) == ringBuffer->element_count)
 	{
-		return -1; // ¶ÓÁÐÎª¿Õ
+		return -1; // é˜Ÿåˆ—ä¸ºç©º
 	}
 
-	tail = (uint8_t*)buf->buffer
-		+ ((buf->tail % buf->elements) * buf->elementSize);
+	tail = (uint8_t*)ringBuffer->buffer
+		+ ((ringBuffer->tail % ringBuffer->element_count) * ringBuffer->element_size);
 
 	if (element)
 	{
-		memcpy(element, tail, buf->elementSize);
+		memcpy(element, tail, ringBuffer->element_size);
 	}
 
-	if (!readOnly)
+	if (readOnly == false )
 	{
-		// ´Ë´¦¿ÉÒÔÔö¼ÓÇåÁãµÄ²Ù×÷£ºmemset(tail, 0, buf->elementSize);
+		// æ­¤å¤„å¯ä»¥å¢žåŠ æ¸…é›¶çš„æ“ä½œï¼šmemset(tail, 0, ringBuffer->elementSize);
 
-		buf->tail++;
-		if (buf->tail >= (2 * buf->elements)) // 2* ÊÇÎªÁË·½±ã¿ÕÏÐ¿Õ¼ä¼ÆËã
+		ringBuffer->tail++;
+		if (ringBuffer->tail >= (2 * ringBuffer->element_count)) // 2* æ˜¯ä¸ºäº†æ–¹ä¾¿ç©ºé—²ç©ºé—´è®¡ç®—
 		{
-			buf->tail = 0;
+			ringBuffer->tail = 0;
 		}
 	}
 	return 0;
@@ -146,20 +161,42 @@ int8_t RingBuffer_Pop(struct RingBuffer_t* buf, void* element, uint8_t readOnly)
 
 /**
 * @Function:  
-          ÖØÖÃ¶ÓÁÐµÄÍ·Ö¸ÕëºÍÎ²²¿Ö¸ÕëÎª0£¬²»Çå³ýÆäËûÄÚÈÝ
+          é‡ç½®é˜Ÿåˆ—çš„å¤´æŒ‡é’ˆå’Œå°¾éƒ¨æŒ‡é’ˆä¸º0ï¼Œä¸æ¸…é™¤å…¶ä»–å†…å®¹
 * @Brief: None
 * @Calls: None
 * @Called By: None
 * @Input:  
-          buf - »·ÐÎ¶ÓÁÐ½á¹¹ÌåÖ¸Õë
+          ringBuffer - çŽ¯å½¢é˜Ÿåˆ—ç»“æž„ä½“æŒ‡é’ˆ
 * @Output: None
-* @Return: None
+* @Return: çŽ¯å½¢é˜Ÿåˆ—ç»“æž„ä½“æŒ‡é’ˆ
 * @Others: None
 **/
-void RingBuffer_Flush(struct RingBuffer_t* buf)
+void* RingBuffer_Reset(struct RingBuffer_t* ringBuffer)
 {
-	buf->tail = 0;
-	buf->head = 0;
+	ringBuffer->tail = 0;
+	ringBuffer->head = 0;
+	return ringBuffer;
 }
+
+/**
+* @Function:  
+          æ¸…ç©ºé˜Ÿåˆ—
+* @Brief: None
+* @Calls: RingBuffer_Reset()ã€memset()
+* @Called By: None
+* @Input:  
+          ringBuffer - çŽ¯å½¢é˜Ÿåˆ—ç»“æž„ä½“æŒ‡é’ˆ
+* @Output: None
+* @Return: çŽ¯å½¢é˜Ÿåˆ—ç»“æž„ä½“æŒ‡é’ˆ
+* @Others: None
+**/
+void* RingBuffer_ClearUp(struct RingBuffer_t* ringBuffer)
+{
+	RingBuffer_Reset(ringBuffer);	
+	memset(ringBuffer->buffer, 0, (ringBuffer->element_count * ringBuffer->element_size));	
+	return ringBuffer;
+}
+
+
 
 /************************************************************** end of file ***/
