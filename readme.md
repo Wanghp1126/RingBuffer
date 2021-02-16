@@ -21,7 +21,7 @@ static struct People people_a, people_b;
 ```
 ## 5个功能的使用
 
-**1、获得环形队列的剩余空间 **
+**1、获得环形队列的剩余空间**
 
 ```c
 uint16_t RingBuffer_FreeSpace(struct RingBuffer_t* ringBuffer);
